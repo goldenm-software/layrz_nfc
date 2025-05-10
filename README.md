@@ -20,7 +20,7 @@ A simple way to interact with NFC cards in Flutter.
 | `write` | ❌ | ❌ | ❌ | ❌ | Write NFC cards. |
 | `simulate` | ❌ | ❌ | ❌ | ❌ | Simulate NFC cards. |  
 | `onRead` | ❌ | ❌ | ❌ | ❌ | Stream that emits when a NFC card is read, requires `startReading` and `stopReading` to work. | 
-
+| `onEvent` | ❌ | ❌ | ❌ | ❌ | Stream that emits when an event, like `ReadStarted`, `ReadStopped`, etc etc etc |
 
 ### Languages used
 | Platform | Language |
