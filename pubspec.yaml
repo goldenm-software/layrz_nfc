@@ -1,7 +1,24 @@
 name: layrz_nfc
-description: "A new Flutter plugin project."
-version: 0.0.1
-homepage:
+description: "A Flutter library for cross-platform Near Field Communication (NFC), supporting Android, iOS, macOS and Windows."
+version: 1.0.0
+homepage: https://github.com/goldenm-software/layrz_nfc
+
+keywords:
+  - flutter
+  - nfc
+  - near field communication
+  - cross-platform
+  - android
+  - ios
+  - macos
+  - windows
+  - layrz
+
+platforms:
+  android:
+  ios:
+  macos:
+  windows:
 
 environment:
   sdk: ">3.6.0 <4.0.0"
