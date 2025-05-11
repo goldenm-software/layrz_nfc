@@ -31,3 +31,14 @@ migrate_working_dir/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+
+
+.vscode/settings.json
+.vscode/c_cpp_properties.json
+
+**/*/flutter/generated_plugins.cmake
+**/*/flutter/generated_plugin_registrant.h
+**/*/flutter/generated_plugin_registrant.cc
+**/*/flutter/ephemeral/*
+**/*/Flutter/ephemeral/*
+**/*/Flutter/GeneratedPluginRegistrant.*

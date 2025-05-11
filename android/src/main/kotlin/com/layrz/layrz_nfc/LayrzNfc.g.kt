@@ -63,7 +63,8 @@ interface LayrzNfcPlatformChannel {
   fun canRead(callback: (Result<Boolean>) -> Unit)
   fun canWrite(callback: (Result<Boolean>) -> Unit)
   fun canSimulate(callback: (Result<Boolean>) -> Unit)
-  fun read(callback: (Result<Boolean>) -> Unit)
+  fun startReading(callback: (Result<Boolean>) -> Unit)
+  fun stopReading(callback: (Result<Boolean>) -> Unit)
 
   companion object {
     /** The codec used by LayrzNfcPlatformChannel. */
@@ -147,10 +148,28 @@ interface LayrzNfcPlatformChannel {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.read$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.startReading$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            api.read{ result: Result<Boolean> ->
+            api.startReading{ result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(LayrzNfcPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(LayrzNfcPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.stopReading$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.stopReading{ result: Result<Boolean> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(LayrzNfcPigeonUtils.wrapError(error))
