@@ -61,6 +61,28 @@ void LayrzNfcPlatformChannel::SetUp(
   const std::string& message_channel_suffix) {
   const std::string prepended_suffix = message_channel_suffix.length() > 0 ? std::string(".") + message_channel_suffix : "";
   {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.bindScanners" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          api->BindScanners([reply](std::optional<FlutterError>&& output) {
+            if (output.has_value()) {
+              reply(WrapError(output.value()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue());
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
+  {
     BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.checkCapabilities" + prepended_suffix, &GetCodec());
     if (api != nullptr) {
       channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
@@ -207,6 +229,46 @@ EncodableValue LayrzNfcPlatformChannel::WrapError(const FlutterError& error) {
     EncodableValue(error.code()),
     EncodableValue(error.message()),
     error.details()
+  });
+}
+
+// Generated class from Pigeon that represents Flutter messages that can be called from C++.
+LayrzNfcCallbackChannel::LayrzNfcCallbackChannel(flutter::BinaryMessenger* binary_messenger)
+ : binary_messenger_(binary_messenger),
+    message_channel_suffix_("") {}
+
+LayrzNfcCallbackChannel::LayrzNfcCallbackChannel(
+  flutter::BinaryMessenger* binary_messenger,
+  const std::string& message_channel_suffix)
+ : binary_messenger_(binary_messenger),
+    message_channel_suffix_(message_channel_suffix.length() > 0 ? std::string(".") + message_channel_suffix : "") {}
+
+const flutter::StandardMessageCodec& LayrzNfcCallbackChannel::GetCodec() {
+  return flutter::StandardMessageCodec::GetInstance(&PigeonInternalCodecSerializer::GetInstance());
+}
+
+void LayrzNfcCallbackChannel::OnRead(
+  const std::vector<uint8_t>& payload_arg,
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
+    EncodableValue(payload_arg),
+  });
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
   });
 }
 

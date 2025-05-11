@@ -20,6 +20,9 @@ import 'package:pigeon/pigeon.dart';
 @HostApi()
 abstract class LayrzNfcPlatformChannel {
   @async
+  void bindScanners();
+
+  @async
   bool checkCapabilities();
 
   @async
@@ -39,11 +42,7 @@ abstract class LayrzNfcPlatformChannel {
 }
 
 // Flutter API from Native to Flutter
-// @FlutterApi()
-// abstract class LayrzNfcCallbackChannel {
-//   void onRead(NfcPayload payload);
-// }
-
-// class NfcPayload {
-//   //
-// }
+@FlutterApi()
+abstract class LayrzNfcCallbackChannel {
+  void onRead(Uint8List payload);
+}

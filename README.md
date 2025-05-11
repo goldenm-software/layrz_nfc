@@ -47,6 +47,8 @@ iOS 14.0 or later.
 
 Windows 10.0 or later (Like as the versions supported by [Flutter](https://docs.flutter.dev/reference/supported-platforms)).
 
+Also, maybe you will need to install the PC/SC driver for your NFC reader.
+
 ## Usage
 To use this plugin, add `layrz_nfc` as a [dependency in your pubspec.yaml file](https://flutter.dev/docs/development/packages-and-plugins/using-packages).
 

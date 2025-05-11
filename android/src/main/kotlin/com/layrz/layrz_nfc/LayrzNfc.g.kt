@@ -15,6 +15,9 @@ import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 private object LayrzNfcPigeonUtils {
 
+  fun createConnectionError(channelName: String): FlutterError {
+    return FlutterError("channel-error",  "Unable to establish connection on channel: '$channelName'.", "")  }
+
   fun wrapResult(result: Any?): List<Any?> {
     return listOf(result)
   }
@@ -59,6 +62,7 @@ private open class LayrzNfcPigeonCodec : StandardMessageCodec() {
 
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface LayrzNfcPlatformChannel {
+  fun bindScanners(callback: (Result<Unit>) -> Unit)
   fun checkCapabilities(callback: (Result<Boolean>) -> Unit)
   fun canRead(callback: (Result<Boolean>) -> Unit)
   fun canWrite(callback: (Result<Boolean>) -> Unit)
@@ -75,6 +79,23 @@ interface LayrzNfcPlatformChannel {
     @JvmOverloads
     fun setUp(binaryMessenger: BinaryMessenger, api: LayrzNfcPlatformChannel?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.bindScanners$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.bindScanners{ result: Result<Unit> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(LayrzNfcPigeonUtils.wrapError(error))
+              } else {
+                reply.reply(LayrzNfcPigeonUtils.wrapResult(null))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
       run {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.checkCapabilities$separatedMessageChannelSuffix", codec)
         if (api != null) {
@@ -183,6 +204,32 @@ interface LayrzNfcPlatformChannel {
           channel.setMessageHandler(null)
         }
       }
+    }
+  }
+}
+/** Generated class from Pigeon that represents Flutter messages that can be called from Kotlin. */
+class LayrzNfcCallbackChannel(private val binaryMessenger: BinaryMessenger, private val messageChannelSuffix: String = "") {
+  companion object {
+    /** The codec used by LayrzNfcCallbackChannel. */
+    val codec: MessageCodec<Any?> by lazy {
+      LayrzNfcPigeonCodec()
+    }
+  }
+  fun onRead(payloadArg: ByteArray, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(payloadArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(LayrzNfcPigeonUtils.createConnectionError(channelName)))
+      } 
     }
   }
 }

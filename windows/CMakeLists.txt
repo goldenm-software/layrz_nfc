@@ -35,6 +35,8 @@ list(APPEND PLUGIN_SOURCES
   "src/thread_handler.hpp"
   "src/layrz_nfc_plugin.cpp"
   "src/layrz_nfc_plugin.h"
+  "src/utils/utils.cpp"
+  "src/utils/utils.h"
   "src/generated/layrz_nfc.g.cpp"
   "src/generated/layrz_nfc.g.h"
 )
@@ -63,7 +65,7 @@ target_compile_definitions(${PLUGIN_NAME} PRIVATE FLUTTER_PLUGIN_IMPL)
 
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin)
+target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin Winscard)
 
 set(layrz_nfc_bundled_libraries
   ""

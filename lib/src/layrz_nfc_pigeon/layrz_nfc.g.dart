@@ -15,6 +15,16 @@ PlatformException _createConnectionError(String channelName) {
   );
 }
 
+List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty = false}) {
+  if (empty) {
+    return <Object?>[];
+  }
+  if (error == null) {
+    return <Object?>[result];
+  }
+  return <Object?>[error.code, error.message, error.details];
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -49,6 +59,29 @@ class LayrzNfcPlatformChannel {
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
 
   final String pigeonVar_messageChannelSuffix;
+
+  Future<void> bindScanners() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.bindScanners$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
 
   Future<bool> checkCapabilities() async {
     final String pigeonVar_channelName = 'dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.checkCapabilities$pigeonVar_messageChannelSuffix';
@@ -215,6 +248,41 @@ class LayrzNfcPlatformChannel {
       );
     } else {
       return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+}
+
+abstract class LayrzNfcCallbackChannel {
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  void onRead(Uint8List payload);
+
+  static void setUp(LayrzNfcCallbackChannel? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
+    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final Uint8List? arg_payload = (args[0] as Uint8List?);
+          assert(arg_payload != null,
+              'Argument for dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead was null, expected non-null Uint8List.');
+          try {
+            api.onRead(arg_payload!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
     }
   }
 }

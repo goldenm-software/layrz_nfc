@@ -49,6 +49,7 @@ template<class T> class ErrorOr {
 
  private:
   friend class LayrzNfcPlatformChannel;
+  friend class LayrzNfcCallbackChannel;
   ErrorOr() = default;
   T TakeValue() && { return std::get<T>(std::move(v_)); }
 
@@ -80,6 +81,7 @@ class LayrzNfcPlatformChannel {
   LayrzNfcPlatformChannel(const LayrzNfcPlatformChannel&) = delete;
   LayrzNfcPlatformChannel& operator=(const LayrzNfcPlatformChannel&) = delete;
   virtual ~LayrzNfcPlatformChannel() {}
+  virtual void BindScanners(std::function<void(std::optional<FlutterError> reply)> result) = 0;
   virtual void CheckCapabilities(std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void CanRead(std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void CanWrite(std::function<void(ErrorOr<bool> reply)> result) = 0;
@@ -102,5 +104,22 @@ class LayrzNfcPlatformChannel {
  protected:
   LayrzNfcPlatformChannel() = default;
 };
+// Generated class from Pigeon that represents Flutter messages that can be called from C++.
+class LayrzNfcCallbackChannel {
+ public:
+  LayrzNfcCallbackChannel(flutter::BinaryMessenger* binary_messenger);
+  LayrzNfcCallbackChannel(
+    flutter::BinaryMessenger* binary_messenger,
+    const std::string& message_channel_suffix);
+  static const flutter::StandardMessageCodec& GetCodec();
+  void OnRead(
+    const std::vector<uint8_t>& payload,
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+ private:
+  flutter::BinaryMessenger* binary_messenger_;
+  std::string message_channel_suffix_;
+};
+
 }  // namespace layrz_nfc
 #endif  // PIGEON_LAYRZ_NFC_G_H_

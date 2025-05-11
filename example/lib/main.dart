@@ -1,25 +1,56 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
-import 'dart:async';
-
-import 'package:flutter/services.dart';
 import 'package:layrz_nfc/layrz_nfc.dart';
+import 'package:layrz_icons/layrz_icons.dart';
+import 'package:layrz_models/layrz_models.dart';
+import 'package:layrz_theme/layrz_theme.dart';
 
-void main() {
+const kFont = AppFont(source: FontSource.google, name: 'Ubuntu');
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ThemedFontHandler.preloadFont(kFont);
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: generateLightTheme(),
+      debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return ThemedSnackbarMessenger(
+          child: child ?? const SizedBox(),
+        );
+      },
+      home: const HomePage(),
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
-  final _layrzNfcPlugin = LayrzNfc();
-  bool canRead = false;
-  bool canWrite = false;
-  bool canSimulate = false;
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  AppThemedAsset get logo => const AppThemedAsset(
+        normal: 'https://cdn.layrz.com/resources/layrz/logo/normal.png',
+        white: 'https://cdn.layrz.com/resources/layrz/logo/white.png',
+      );
+  AppThemedAsset get favicon => const AppThemedAsset(
+        normal: 'https://cdn.layrz.com/resources/layrz/favicon/normal.png',
+        white: 'https://cdn.layrz.com/resources/layrz/favicon/white.png',
+      );
+
+  final plugin = LayrzNfc();
+  bool _isReading = false;
 
   @override
   void initState() {
@@ -28,42 +59,102 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Plugin example app')),
-        body: Center(
-          child: Column(
-            spacing: 24,
-            children: [
-              Text('Can Nfc Read: $canRead'),
-              Text('Can Nfc Write: $canWrite'),
-              Text('Can Nfc Simulate: $canSimulate'),
+    return ThemedLayout(
+      isBackEnabled: false,
+      logo: logo,
+      favicon: favicon,
+      appTitle: 'Layrz NFC',
+      enableNotifications: false,
+      userDynamicAvatar: Avatar(
+        type: AvatarType.icon,
+        icon: LayrzIconsClasses.solarOutlineUser,
+      ),
+      body: SizedBox(
+        width: double.infinity,
+        child: Column(
+          children: [
+            Text(
+              "Layrz NFC",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ThemedButton(
+                    labelText: 'Check capabilities',
+                    color: Colors.blue,
+                    onTap: () async {
+                      await plugin.bindScanners();
 
-              ElevatedButton(
-                onPressed: () => _callAll(),
-                child: const Text('Check Capabilities'),
+                      bool result = await plugin.checkCapabilities();
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        message: 'Capabilities: $result',
+                        color: Colors.blue,
+                        icon: LayrzIcons.solarOutlineBluetoothSquare,
+                        maxLines: 5,
+                      ));
+
+                      await Future.delayed(const Duration(milliseconds: 100));
+
+                      result = await plugin.canRead();
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        message: 'Can read: $result',
+                        color: Colors.blue,
+                        icon: LayrzIcons.solarOutlineBluetoothSquare,
+                        maxLines: 5,
+                      ));
+
+                      await Future.delayed(const Duration(milliseconds: 100));
+
+                      result = await plugin.canWrite();
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        message: 'Can write: $result',
+                        color: Colors.blue,
+                        icon: LayrzIcons.solarOutlineBluetoothSquare,
+                        maxLines: 5,
+                      ));
+
+                      await Future.delayed(const Duration(milliseconds: 100));
+
+                      result = await plugin.canSimulate();
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                        message: 'Can simulate: $result',
+                        color: Colors.blue,
+                        icon: LayrzIcons.solarOutlineBluetoothSquare,
+                        maxLines: 5,
+                      ));
+                    },
+                  ),
+                  if (_isReading) ...[
+                    const SizedBox(width: 10),
+                    ThemedButton(
+                      labelText: 'Stop reading',
+                      color: Colors.red,
+                      onTap: () async {
+                        await plugin.stopReading();
+                        setState(() => _isReading = false);
+                      },
+                    ),
+                  ] else ...[
+                    const SizedBox(width: 10),
+                    ThemedButton(
+                      labelText: 'Start reading',
+                      color: Colors.green,
+                      onTap: () async {
+                        await plugin.startReading();
+                        setState(() => _isReading = true);
+                      },
+                    ),
+                  ],
+                ],
               ),
-              ElevatedButton(
-                onPressed: () => _readNfc(),
-                child: const Text('Can Read'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
-  }
-
-  void _callAll() async {
-    canRead = await _layrzNfcPlugin.canRead();
-    canWrite = await _layrzNfcPlugin.canWrite();
-    canSimulate = await _layrzNfcPlugin.canSimulate();
-    setState(() {});
-  }
-
-  void _readNfc() async {
-    final bool success = await _layrzNfcPlugin.read();
-    debugPrint("Read NFC Success: $success");
-    setState(() {});
   }
 }

@@ -10,30 +10,36 @@ class LayrzNfc {
     return LayrzNfcPigeonChannel.instance;
   }
 
+  /// Binds the NFC scanners to the platform.
+  Future<void> bindScanners() => _channel.bindScanners();
+
   /// Checks if the device has the necessary capabilities to use NFC.
   ///
-  /// Returns a `Future<bool>` indicating whether the capabilities are available.
-  /// Currently not implemented.
+  /// This validation is only for check if the device has NFC capabilities, aka, device has NFC hardware.
   Future<bool> checkCapabilities() => _channel.checkCapabilities();
 
   /// Checks if the device can read NFC tags.
   ///
-  /// Returns a `Future<bool>` indicating whether reading is possible.
-  /// Currently not implemented.
+  /// Returns `true` if the device can read NFC tags, `false` otherwise.
   Future<bool> canRead() => _channel.canRead();
 
   /// Checks if the device can write to NFC tags.
   ///
-  /// Returns a `Future<bool>` indicating whether writing is possible.
-  /// Currently not implemented.
+  /// Returns `true` if the device can write to NFC tags, `false` otherwise.
   Future<bool> canWrite() => _channel.canWrite();
 
   /// Checks if the device can simulate NFC tags.
   ///
-  /// Returns a `Future<bool>` indicating whether simulation is possible.
-  /// Currently not implemented.
+  /// Returns `true` if the device can simulate NFC tags, `false` otherwise.
   Future<bool> canSimulate() => _channel.canSimulate();
 
-  /// Reads data from an NFC tag.
-  Future<bool> read() => _channel.read();
+  /// Starts reading NFC tags.
+  ///
+  /// This method should be called to initiate the NFC reading process.
+  Future<bool> startReading() => _channel.startReading();
+
+  /// Stops reading NFC tags.
+  ///
+  /// This method should be called to stop the NFC reading process.
+  Future<bool> stopReading() => _channel.stopReading();
 }
