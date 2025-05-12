@@ -20,9 +20,6 @@ import 'package:pigeon/pigeon.dart';
 @HostApi()
 abstract class LayrzNfcPlatformChannel {
   @async
-  void bindScanners();
-
-  @async
   bool checkCapabilities();
 
   @async

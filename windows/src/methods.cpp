@@ -41,11 +41,6 @@ namespace layrz_nfc {
     result(ErrorOr<bool>(false));
   }
 
-  void LayrzNfcPlugin::BindScanners(std::function<void(std::optional<FlutterError> reply)> result) {
-    GetScannersAsync();
-    result(std::nullopt);
-  }
-
   void LayrzNfcPlugin::StartReading(std::function<void(ErrorOr<bool> reply)> result) {
     if (nfc_ == nullptr) {
       Utils::Log("No NFC reader assigned.");

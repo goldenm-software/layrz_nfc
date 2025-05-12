@@ -1,5 +1,6 @@
 import 'package:layrz_nfc/src/layrz_nfc_pigeon/pigeon_channel.dart';
 import 'package:layrz_nfc/src/platform_interface.dart';
+import 'package:ndef/ndef.dart';
 
 /// The `LayrzNfc` class defines an interface for interacting with NFC capabilities.
 /// The methods in this class should be implemented to provide specific functionality
@@ -10,8 +11,12 @@ class LayrzNfc {
     return LayrzNfcPigeonChannel.instance;
   }
 
-  /// Binds the NFC scanners to the platform.
-  Future<void> bindScanners() => _channel.bindScanners();
+  /// Listens for NFC tag read events.
+  ///
+  /// You need to call [startReading] to start receiving events.
+  /// This stream emits [NDEFRecord] objects when a tag is read, you can receive multiple [NDEFRecord]s per tag
+  /// depending on the tag payload.
+  Stream<NDEFRecord> get onRead => _channel.onRead;
 
   /// Checks if the device has the necessary capabilities to use NFC.
   ///

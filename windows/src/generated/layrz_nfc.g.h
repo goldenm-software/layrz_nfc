@@ -112,7 +112,6 @@ class LayrzNfcPlatformChannel {
   LayrzNfcPlatformChannel(const LayrzNfcPlatformChannel&) = delete;
   LayrzNfcPlatformChannel& operator=(const LayrzNfcPlatformChannel&) = delete;
   virtual ~LayrzNfcPlatformChannel() {}
-  virtual void BindScanners(std::function<void(std::optional<FlutterError> reply)> result) = 0;
   virtual void CheckCapabilities(std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void CanRead(std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void CanWrite(std::function<void(ErrorOr<bool> reply)> result) = 0;

@@ -80,11 +80,6 @@ namespace layrz_nfc {
       /// @note This function is called to get the proximity device asynchronously.
       winrt::fire_and_forget GetScannersAsync();
 
-      /// @brief Binds the NFC scanners to the plugin.
-      /// @param result The result callback to be called with the result.
-      /// @note This function is called to bind the NFC scanners to the plugin.
-      void BindScanners(std::function<void(std::optional<FlutterError> reply)> result);
-
       /// @brief Checks if the device has NFC capabilities.
       /// @param result The result callback to be called with the result.
       void CheckCapabilities(std::function<void(ErrorOr<bool> reply)> result);

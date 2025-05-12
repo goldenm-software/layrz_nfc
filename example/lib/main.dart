@@ -89,8 +89,6 @@ class _HomePageState extends State<HomePage> {
                     labelText: 'Check capabilities',
                     color: Colors.blue,
                     onTap: () async {
-                      await plugin.bindScanners();
-
                       bool result = await plugin.checkCapabilities();
                       ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
                         message: 'Capabilities: $result',

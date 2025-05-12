@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:layrz_nfc/src/layrz_nfc_pigeon/layrz_nfc.g.dart';
 import 'package:layrz_nfc/src/platform_interface.dart';
 import 'package:ndef/ndef.dart' as ndef;
+import 'package:ndef/record.dart';
 
 class LayrzNfcPigeonChannel extends LayrzNfcPlatformInterface {
   static LayrzNfcPigeonChannel? _instance;
@@ -11,12 +14,14 @@ class LayrzNfcPigeonChannel extends LayrzNfcPlatformInterface {
   }
 
   LayrzNfcPigeonChannel._() {
-    LayrzNfcCallbackChannel.setUp(_LayrzNfcCallbackHandler());
+    LayrzNfcCallbackChannel.setUp(_LayrzNfcCallbackHandler(readController: _readController));
   }
   final _channel = LayrzNfcPlatformChannel();
 
+  final StreamController<NDEFRecord> _readController = StreamController<NDEFRecord>.broadcast();
+
   @override
-  Future<void> bindScanners() => _channel.bindScanners();
+  Stream<NDEFRecord> get onRead => _readController.stream;
 
   @override
   Future<bool> checkCapabilities() => _channel.checkCapabilities();
@@ -38,6 +43,9 @@ class LayrzNfcPigeonChannel extends LayrzNfcPlatformInterface {
 }
 
 class _LayrzNfcCallbackHandler extends LayrzNfcCallbackChannel {
+  final StreamController<NDEFRecord> readController;
+  _LayrzNfcCallbackHandler({required this.readController});
+
   @override
   void onRead(TagPayload payload) {
     final bytes = payload.payload;
@@ -64,7 +72,10 @@ class _LayrzNfcCallbackHandler extends LayrzNfcCallbackChannel {
     // debugPrint("Trimmed data: ${data.humanized}");
 
     final output = ndef.decodeRawNdefMessage(data);
-    debugPrint("Decoded NDEF message for type ${payload.format}: $output");
+    // debugPrint("Decoded NDEF message for type ${payload.format}: $output");
+    for (final record in output) {
+      readController.add(record);
+    }
   }
 }
 
