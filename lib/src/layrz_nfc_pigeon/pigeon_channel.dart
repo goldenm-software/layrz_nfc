@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:layrz_nfc/src/layrz_nfc_pigeon/layrz_nfc.g.dart';
-import 'package:layrz_nfc/src/parsers/parsers.dart';
 import 'package:layrz_nfc/src/platform_interface.dart';
 import 'package:ndef/ndef.dart' as ndef;
 
@@ -43,16 +40,36 @@ class LayrzNfcPigeonChannel extends LayrzNfcPlatformInterface {
 class _LayrzNfcCallbackHandler extends LayrzNfcCallbackChannel {
   @override
   void onRead(TagPayload payload) {
-    switch (payload.format) {
-      case TagFormat.nfcForumType2:
-        parseNfcForumType2(payload.payload);
-        break;
-      case TagFormat.mifareClassic:
-        parseMifareClassic(payload.payload);
-        break;
-      // ignore: unreachable_switch_default
-      default:
-        debugPrint('Unknown tag format: ${payload.format}');
+    final bytes = payload.payload;
+    // debugPrint("Received bytes: ${bytes.humanized}");
+    int index = -1;
+    int length = 0;
+
+    for (int i = 0; i < bytes.length - 2; i++) {
+      if (bytes[i] == 0x03) {
+        final len = bytes[i + 1];
+        if (len > 0 && i + 2 + len <= bytes.length) {
+          index = i;
+          length = len;
+        }
+      }
     }
+
+    if (index == -1) {
+      // debugPrint("No TLV found");
+      return;
+    }
+
+    final data = bytes.sublist(index + 2, index + 2 + length);
+    // debugPrint("Trimmed data: ${data.humanized}");
+
+    final output = ndef.decodeRawNdefMessage(data);
+    debugPrint("Decoded NDEF message for type ${payload.format}: $output");
+  }
+}
+
+extension HumanizedUint8List on Uint8List {
+  String get humanized {
+    return map((e) => '0x${e.toRadixString(16).padLeft(2, '0')}').join(', ');
   }
 }

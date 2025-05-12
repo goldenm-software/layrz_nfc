@@ -42,6 +42,7 @@ bool _deepEquals(Object? a, Object? b) {
 enum TagFormat {
   nfcForumType2,
   mifareClassic,
+  unknown,
 }
 
 class TagPayload {

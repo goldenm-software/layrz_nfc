@@ -41,8 +41,11 @@ list(APPEND PLUGIN_SOURCES
   "src/generated/layrz_nfc.g.h"
 
   # Files
-  "src/layrz_nfc_plugin.cpp"
+  "src/constructor.cpp"
+  "src/helpers.cpp"
+  "src/methods.cpp"
   "src/utils/log.cpp"
+  "src/utils/is_success.cpp"
   "src/utils/bytes_to_hex.cpp"
   "src/parsers/get_card_type.cpp"
   "src/generated/layrz_nfc.g.cpp"

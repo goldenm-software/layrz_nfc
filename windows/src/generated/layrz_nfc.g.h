@@ -59,7 +59,8 @@ template<class T> class ErrorOr {
 
 enum class TagFormat {
   kNfcForumType2 = 0,
-  kMifareClassic = 1
+  kMifareClassic = 1,
+  kUnknown = 2
 };
 
 

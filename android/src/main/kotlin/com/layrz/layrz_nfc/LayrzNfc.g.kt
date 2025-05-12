@@ -83,7 +83,8 @@ class FlutterError (
 
 enum class TagFormat(val raw: Int) {
   NFC_FORUM_TYPE2(0),
-  MIFARE_CLASSIC(1);
+  MIFARE_CLASSIC(1),
+  UNKNOWN(2);
 
   companion object {
     fun ofRaw(raw: Int): TagFormat? {

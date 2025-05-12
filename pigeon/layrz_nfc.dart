@@ -50,6 +50,7 @@ abstract class LayrzNfcCallbackChannel {
 enum TagFormat {
   nfcForumType2,
   mifareClassic,
+  unknown,
 }
 
 class TagPayload {

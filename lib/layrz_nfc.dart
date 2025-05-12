@@ -1,8 +1,6 @@
 import 'package:layrz_nfc/src/layrz_nfc_pigeon/pigeon_channel.dart';
 import 'package:layrz_nfc/src/platform_interface.dart';
 
-export 'src/parsers/parsers.dart';
-
 /// The `LayrzNfc` class defines an interface for interacting with NFC capabilities.
 /// The methods in this class should be implemented to provide specific functionality
 /// related to reading, writing, and simulating NFC tags.
