@@ -24,6 +24,71 @@ List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty
   }
   return <Object?>[error.code, error.message, error.details];
 }
+bool _deepEquals(Object? a, Object? b) {
+  if (a is List && b is List) {
+    return a.length == b.length &&
+        a.indexed
+        .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+  }
+  if (a is Map && b is Map) {
+    return a.length == b.length && a.entries.every((MapEntry<Object?, Object?> entry) =>
+        (b as Map<Object?, Object?>).containsKey(entry.key) &&
+        _deepEquals(entry.value, b[entry.key]));
+  }
+  return a == b;
+}
+
+
+enum TagFormat {
+  nfcForumType2,
+  mifareClassic,
+}
+
+class TagPayload {
+  TagPayload({
+    required this.payload,
+    required this.format,
+  });
+
+  Uint8List payload;
+
+  TagFormat format;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      payload,
+      format,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static TagPayload decode(Object result) {
+    result as List<Object?>;
+    return TagPayload(
+      payload: result[0]! as Uint8List,
+      format: result[1]! as TagFormat,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! TagPayload || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
 
 
 class _PigeonCodec extends StandardMessageCodec {
@@ -33,6 +98,12 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
+    }    else if (value is TagFormat) {
+      buffer.putUint8(129);
+      writeValue(buffer, value.index);
+    }    else if (value is TagPayload) {
+      buffer.putUint8(130);
+      writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
     }
@@ -41,6 +112,11 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
+      case 129: 
+        final int? value = readValue(buffer) as int?;
+        return value == null ? null : TagFormat.values[value];
+      case 130: 
+        return TagPayload.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -255,7 +331,7 @@ class LayrzNfcPlatformChannel {
 abstract class LayrzNfcCallbackChannel {
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
 
-  void onRead(Uint8List payload);
+  void onRead(TagPayload payload);
 
   static void setUp(LayrzNfcCallbackChannel? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
     messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
@@ -270,9 +346,9 @@ abstract class LayrzNfcCallbackChannel {
           assert(message != null,
           'Argument for dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead was null.');
           final List<Object?> args = (message as List<Object?>?)!;
-          final Uint8List? arg_payload = (args[0] as Uint8List?);
+          final TagPayload? arg_payload = (args[0] as TagPayload?);
           assert(arg_payload != null,
-              'Argument for dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead was null, expected non-null Uint8List.');
+              'Argument for dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead was null, expected non-null TagPayload.');
           try {
             api.onRead(arg_payload!);
             return wrapResponse(empty: true);

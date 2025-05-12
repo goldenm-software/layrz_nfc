@@ -37,6 +37,36 @@ private object LayrzNfcPigeonUtils {
       )
     }
   }
+  fun deepEquals(a: Any?, b: Any?): Boolean {
+    if (a is ByteArray && b is ByteArray) {
+        return a.contentEquals(b)
+    }
+    if (a is IntArray && b is IntArray) {
+        return a.contentEquals(b)
+    }
+    if (a is LongArray && b is LongArray) {
+        return a.contentEquals(b)
+    }
+    if (a is DoubleArray && b is DoubleArray) {
+        return a.contentEquals(b)
+    }
+    if (a is Array<*> && b is Array<*>) {
+      return a.size == b.size &&
+          a.indices.all{ deepEquals(a[it], b[it]) }
+    }
+    if (a is List<*> && b is List<*>) {
+      return a.size == b.size &&
+          a.indices.all{ deepEquals(a[it], b[it]) }
+    }
+    if (a is Map<*, *> && b is Map<*, *>) {
+      return a.size == b.size && a.all {
+          (b as Map<Any?, Any?>).containsKey(it.key) &&
+          deepEquals(it.value, b[it.key])
+      }
+    }
+    return a == b
+  }
+      
 }
 
 /**
@@ -50,12 +80,76 @@ class FlutterError (
   override val message: String? = null,
   val details: Any? = null
 ) : Throwable()
+
+enum class TagFormat(val raw: Int) {
+  NFC_FORUM_TYPE2(0),
+  MIFARE_CLASSIC(1);
+
+  companion object {
+    fun ofRaw(raw: Int): TagFormat? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class TagPayload (
+  val payload: ByteArray,
+  val format: TagFormat
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): TagPayload {
+      val payload = pigeonVar_list[0] as ByteArray
+      val format = pigeonVar_list[1] as TagFormat
+      return TagPayload(payload, format)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      payload,
+      format,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is TagPayload) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return LayrzNfcPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
 private open class LayrzNfcPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
-    return     super.readValueOfType(type, buffer)
+    return when (type) {
+      129.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          TagFormat.ofRaw(it.toInt())
+        }
+      }
+      130.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          TagPayload.fromList(it)
+        }
+      }
+      else -> super.readValueOfType(type, buffer)
+    }
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
-    super.writeValue(stream, value)
+    when (value) {
+      is TagFormat -> {
+        stream.write(129)
+        writeValue(stream, value.raw)
+      }
+      is TagPayload -> {
+        stream.write(130)
+        writeValue(stream, value.toList())
+      }
+      else -> super.writeValue(stream, value)
+    }
   }
 }
 
@@ -215,7 +309,7 @@ class LayrzNfcCallbackChannel(private val binaryMessenger: BinaryMessenger, priv
       LayrzNfcPigeonCodec()
     }
   }
-  fun onRead(payloadArg: ByteArray, callback: (Result<Unit>) -> Unit)
+  fun onRead(payloadArg: TagPayload, callback: (Result<Unit>) -> Unit)
 {
     val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
     val channelName = "dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead$separatedMessageChannelSuffix"

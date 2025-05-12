@@ -3,6 +3,14 @@
 #ifndef __FLUTTER_PLUGIN_LAYRZ_NFC_PLUGIN_H__
 #define __FLUTTER_PLUGIN_LAYRZ_NFC_PLUGIN_H__
 
+#ifndef NFC_READ_TIMEOUT
+#define NFC_READ_TIMEOUT 2 // seconds
+#endif // NFC_READ_TIMEOUT
+
+#ifndef NFC_LOOP_SLEEP
+#define NFC_LOOP_SLEEP 500 // milliseconds
+#endif // NFC_LOOP_SLEEP
+
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 
@@ -16,6 +24,7 @@
 
 #include "thread_handler.hpp"
 #include "utils/utils.h"
+#include "parsers/parsers.h"
 #include "generated/layrz_nfc.g.h"
 
 namespace layrz_nfc {
@@ -43,13 +52,13 @@ namespace layrz_nfc {
       LayrzNfcPluginUiThreadHandler uiThreadHandler_;
 
       /// @brief This is the context used for establishing a connection to the NFC device.
-      SCARDCONTEXT context = 0;
+      SCARDCONTEXT context_ = 0;
 
       /// @brief This is the flag used to stop the background thread.
-      std::atomic<bool> should_stop_ = false;
+      std::atomic<bool> shouldStop_ = false;
 
       /// @brief This is the background thread used for reading NFC tags.
-      std::thread read_thread_;
+      std::thread readThread_;
 
       /// @brief Registers the plugin with the Flutter engine.
       /// @param registrar The plugin registrar for the plugin.
@@ -120,6 +129,45 @@ namespace layrz_nfc {
           std::cout << "ErrorCode: " << error.code() << " Message: " << error.message() << std::endl;
         }
       }
+
+      /// @brief Gets the status of the reader state.
+      /// @param state The reader state to be checked.
+      /// @return The status of the reader state.
+      std::string getStatusOfReaderState(SCARD_READERSTATEA state);
+
+      /// @brief Reads the Mifare Mini card.
+      /// @param card The card handle to be used for reading the card.
+      /// @param protocol The protocol to be used for reading the card.
+      /// @note This function is called to read the Mifare Mini card.
+      void readMifareMiniCard(SCARDHANDLE card, DWORD protocol);
+
+      /// @brief Reads the Mifare Classic card.
+      /// @param card The card handle to be used for reading the card.
+      /// @note This function is called to read the Mifare Classic card.
+      void readMifareClassicCard(SCARDHANDLE card);
+
+      /// @brief Reads the NFC Forum Type 2 card.
+      /// @param card The card handle to be used for reading the card.
+      /// @note This function is called to read the NFC Forum Type 2 card.
+      void readNfcForumType2Card(SCARDHANDLE card);
+
+      /// @brief Authenticates the card.
+      /// @param card The card handle to be used for authentication.
+      /// @param block The block number to be authenticated.
+      /// @return the vector to be send to the card.
+      std::vector<BYTE> buildAuthAPDUCommand(BYTE block);
+
+      /// @brief Builds the read APDU command.
+      /// @param block The block number to be read.
+      /// @return The read APDU command to be sent to the card.
+      std::vector<BYTE> buildReadAPDUCommand(BYTE block);
+
+      /// @brief Sends an APDU command to the card.
+      /// @param hCard The card handle to be used for sending the command.
+      /// @param cmd The command to be sent to the card.
+      /// @param response The response to be received from the card.
+      /// @return The response from the card.
+      std::vector<BYTE> send(SCARDHANDLE hCard, BYTE* cmd, DWORD len, DWORD protocol);
   };
 
 }  // namespace layrz_nfc

@@ -44,5 +44,20 @@ abstract class LayrzNfcPlatformChannel {
 // Flutter API from Native to Flutter
 @FlutterApi()
 abstract class LayrzNfcCallbackChannel {
-  void onRead(Uint8List payload);
+  void onRead(TagPayload payload);
+}
+
+enum TagFormat {
+  nfcForumType2,
+  mifareClassic,
+}
+
+class TagPayload {
+  final Uint8List payload;
+  final TagFormat format;
+
+  TagPayload({
+    required this.payload,
+    required this.format,
+  });
 }

@@ -33,12 +33,19 @@ endif()
 
 list(APPEND PLUGIN_SOURCES
   "src/thread_handler.hpp"
-  "src/layrz_nfc_plugin.cpp"
+
+  # Headers
   "src/layrz_nfc_plugin.h"
-  "src/utils/utils.cpp"
   "src/utils/utils.h"
-  "src/generated/layrz_nfc.g.cpp"
+  "src/parsers/parsers.h"
   "src/generated/layrz_nfc.g.h"
+
+  # Files
+  "src/layrz_nfc_plugin.cpp"
+  "src/utils/log.cpp"
+  "src/utils/bytes_to_hex.cpp"
+  "src/parsers/get_card_type.cpp"
+  "src/generated/layrz_nfc.g.cpp"
 )
 
 add_library(${PLUGIN_NAME} SHARED

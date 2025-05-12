@@ -28,18 +28,82 @@ FlutterError CreateConnectionError(const std::string channel_name) {
       EncodableValue(""));
 }
 
+// TagPayload
+
+TagPayload::TagPayload(
+  const std::vector<uint8_t>& payload,
+  const TagFormat& format)
+ : payload_(payload),
+    format_(format) {}
+
+const std::vector<uint8_t>& TagPayload::payload() const {
+  return payload_;
+}
+
+void TagPayload::set_payload(const std::vector<uint8_t>& value_arg) {
+  payload_ = value_arg;
+}
+
+
+const TagFormat& TagPayload::format() const {
+  return format_;
+}
+
+void TagPayload::set_format(const TagFormat& value_arg) {
+  format_ = value_arg;
+}
+
+
+EncodableList TagPayload::ToEncodableList() const {
+  EncodableList list;
+  list.reserve(2);
+  list.push_back(EncodableValue(payload_));
+  list.push_back(CustomEncodableValue(format_));
+  return list;
+}
+
+TagPayload TagPayload::FromEncodableList(const EncodableList& list) {
+  TagPayload decoded(
+    std::get<std::vector<uint8_t>>(list[0]),
+    std::any_cast<const TagFormat&>(std::get<CustomEncodableValue>(list[1])));
+  return decoded;
+}
+
 
 PigeonInternalCodecSerializer::PigeonInternalCodecSerializer() {}
 
 EncodableValue PigeonInternalCodecSerializer::ReadValueOfType(
   uint8_t type,
   flutter::ByteStreamReader* stream) const {
-  return flutter::StandardCodecSerializer::ReadValueOfType(type, stream);
+  switch (type) {
+    case 129: {
+        const auto& encodable_enum_arg = ReadValue(stream);
+        const int64_t enum_arg_value = encodable_enum_arg.IsNull() ? 0 : encodable_enum_arg.LongValue();
+        return encodable_enum_arg.IsNull() ? EncodableValue() : CustomEncodableValue(static_cast<TagFormat>(enum_arg_value));
+      }
+    case 130: {
+        return CustomEncodableValue(TagPayload::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+      }
+    default:
+      return flutter::StandardCodecSerializer::ReadValueOfType(type, stream);
+    }
 }
 
 void PigeonInternalCodecSerializer::WriteValue(
   const EncodableValue& value,
   flutter::ByteStreamWriter* stream) const {
+  if (const CustomEncodableValue* custom_value = std::get_if<CustomEncodableValue>(&value)) {
+    if (custom_value->type() == typeid(TagFormat)) {
+      stream->WriteByte(129);
+      WriteValue(EncodableValue(static_cast<int>(std::any_cast<TagFormat>(*custom_value))), stream);
+      return;
+    }
+    if (custom_value->type() == typeid(TagPayload)) {
+      stream->WriteByte(130);
+      WriteValue(EncodableValue(std::any_cast<TagPayload>(*custom_value).ToEncodableList()), stream);
+      return;
+    }
+  }
   flutter::StandardCodecSerializer::WriteValue(value, stream);
 }
 
@@ -248,13 +312,13 @@ const flutter::StandardMessageCodec& LayrzNfcCallbackChannel::GetCodec() {
 }
 
 void LayrzNfcCallbackChannel::OnRead(
-  const std::vector<uint8_t>& payload_arg,
+  const TagPayload& payload_arg,
   std::function<void(void)>&& on_success,
   std::function<void(const FlutterError&)>&& on_error) {
   const std::string channel_name = "dev.flutter.pigeon.layrz_nfc.LayrzNfcCallbackChannel.onRead" + message_channel_suffix_;
   BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
   EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
-    EncodableValue(payload_arg),
+    CustomEncodableValue(payload_arg),
   });
   channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
     std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);

@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:layrz_nfc/src/layrz_nfc_pigeon/layrz_nfc.g.dart';
+import 'package:layrz_nfc/src/parsers/parsers.dart';
 import 'package:layrz_nfc/src/platform_interface.dart';
+import 'package:ndef/ndef.dart' as ndef;
 
 class LayrzNfcPigeonChannel extends LayrzNfcPlatformInterface {
   static LayrzNfcPigeonChannel? _instance;
@@ -40,124 +42,17 @@ class LayrzNfcPigeonChannel extends LayrzNfcPlatformInterface {
 
 class _LayrzNfcCallbackHandler extends LayrzNfcCallbackChannel {
   @override
-  void onRead(Uint8List payload) {
-    debugPrint('Received payload: ${payload.humanized}');
-    final i = payload.indexOf(0x03); // TLV Type
-    if (i == -1 || i + 1 >= payload.length) {
-      debugPrint('Invalid payload: ${payload.humanized}');
-      return;
+  void onRead(TagPayload payload) {
+    switch (payload.format) {
+      case TagFormat.nfcForumType2:
+        parseNfcForumType2(payload.payload);
+        break;
+      case TagFormat.mifareClassic:
+        parseMifareClassic(payload.payload);
+        break;
+      // ignore: unreachable_switch_default
+      default:
+        debugPrint('Unknown tag format: ${payload.format}');
     }
-
-    final length = payload[i + 1];
-    final start = i + 2;
-    final end = start + length;
-
-    if (end > payload.length) {
-      debugPrint('Invalid payload length: ${payload.humanized}');
-      debugPrint('\tStart: $start, End: $end, Length: $length');
-      return;
-    }
-
-    final ndefMessage = payload.sublist(start, end);
-    debugPrint('Trimmed payload: ${ndefMessage.humanized}');
-
-    parseNdef(ndefMessage);
-  }
-
-  void parseNdef(Uint8List bytes) {
-    int i = 0;
-    while (i < bytes.length) {
-      final header = bytes[i];
-      final isME = (header & 0x40) != 0;
-      final isSR = (header & 0x10) != 0;
-      final tnf = header & 0x07;
-
-      if (!isSR) {
-        debugPrint('❌ Only short records (SR=1) supported in this parser.');
-        return;
-      }
-
-      final typeLength = bytes[i + 1];
-      final payloadLength = bytes[i + 2];
-      final typeStart = i + 3;
-      final payloadStart = typeStart + typeLength;
-      final payloadEnd = payloadStart + payloadLength;
-
-      if (payloadEnd > bytes.length) {
-        debugPrint('❌ Invalid length in NDEF record.');
-        return;
-      }
-
-      final type = String.fromCharCodes(bytes.sublist(typeStart, payloadStart));
-      final payload = bytes.sublist(payloadStart, payloadEnd);
-
-      // Print record
-      debugPrint('📦 TNF: $tnf, Type: $type, Payload: ${payload.humanized}');
-
-      if (tnf == 1 && type == 'T') {
-        final langLen = payload[0];
-        final text = String.fromCharCodes(payload.sublist(1 + langLen));
-        debugPrint('📝 Text: $text');
-      } else if (tnf == 1 && type == 'U') {
-        final uriId = payload[0];
-        String uriSuffix = payload.sublist(1).map((e) => String.fromCharCode(e)).join();
-        String uriPrefix = decodeUriPrefix(uriId);
-        String uri = uriPrefix + uriSuffix;
-        debugPrint('🌐 URI: $uri');
-      } else {
-        debugPrint('📦 Unsupported TNF: $tnf, Type: $type');
-      }
-
-      i = payloadEnd;
-      if (isME) break;
-    }
-  }
-
-  String decodeUriPrefix(int id) {
-    const prefixes = [
-      '',
-      'http://www.',
-      'https://www.',
-      'http://',
-      'https://',
-      'tel:',
-      'mailto:',
-      'ftp://anonymous:anonymous@',
-      'ftp://ftp.',
-      'ftps://',
-      'sftp://',
-      'smb://',
-      'nfs://',
-      'ftp://',
-      'dav://',
-      'news:',
-      'telnet://',
-      'imap:',
-      'rtsp://',
-      'urn:',
-      'pop:',
-      'sip:',
-      'sips:',
-      'tftp:',
-      'btspp://',
-      'btl2cap://',
-      'btgoep://',
-      'tcpobex://',
-      'irdaobex://',
-      'file://',
-      'urn:epc:id:',
-      'urn:epc:tag:',
-      'urn:epc:pat:',
-      'urn:epc:raw:',
-      'urn:epc:',
-      'urn:nfc:'
-    ];
-    return (id < prefixes.length) ? prefixes[id] : '';
-  }
-}
-
-extension on Uint8List {
-  String get humanized {
-    return map((e) => e.toRadixString(16).padLeft(2, '0')).join(' ');
   }
 }

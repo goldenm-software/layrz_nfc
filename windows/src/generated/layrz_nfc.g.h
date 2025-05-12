@@ -57,6 +57,36 @@ template<class T> class ErrorOr {
 };
 
 
+enum class TagFormat {
+  kNfcForumType2 = 0,
+  kMifareClassic = 1
+};
+
+
+// Generated class from Pigeon that represents data sent in messages.
+class TagPayload {
+ public:
+  // Constructs an object setting all fields.
+  explicit TagPayload(
+    const std::vector<uint8_t>& payload,
+    const TagFormat& format);
+
+  const std::vector<uint8_t>& payload() const;
+  void set_payload(const std::vector<uint8_t>& value_arg);
+
+  const TagFormat& format() const;
+  void set_format(const TagFormat& value_arg);
+
+ private:
+  static TagPayload FromEncodableList(const flutter::EncodableList& list);
+  flutter::EncodableList ToEncodableList() const;
+  friend class LayrzNfcPlatformChannel;
+  friend class LayrzNfcCallbackChannel;
+  friend class PigeonInternalCodecSerializer;
+  std::vector<uint8_t> payload_;
+  TagFormat format_;
+};
+
 
 class PigeonInternalCodecSerializer : public flutter::StandardCodecSerializer {
  public:
@@ -113,7 +143,7 @@ class LayrzNfcCallbackChannel {
     const std::string& message_channel_suffix);
   static const flutter::StandardMessageCodec& GetCodec();
   void OnRead(
-    const std::vector<uint8_t>& payload,
+    const TagPayload& payload,
     std::function<void(void)>&& on_success,
     std::function<void(const FlutterError&)>&& on_error);
  private:
