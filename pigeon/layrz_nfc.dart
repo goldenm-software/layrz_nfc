@@ -20,9 +20,6 @@ import 'package:pigeon/pigeon.dart';
 @HostApi()
 abstract class LayrzNfcPlatformChannel {
   @async
-  void bindScanners();
-
-  @async
   bool checkCapabilities();
 
   @async
@@ -50,6 +47,7 @@ abstract class LayrzNfcCallbackChannel {
 enum TagFormat {
   nfcForumType2,
   mifareClassic,
+  unknown,
 }
 
 class TagPayload {

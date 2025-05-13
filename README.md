@@ -30,6 +30,12 @@ A simple way to interact with NFC cards in Flutter.
 | macOS | Swift |
 | Windows | C++ |
 
+## Data formats supported
+| Data format | Android | iOS | macOS | Windows |
+| --- | --- | --- | --- | --- |
+| MIFARE Classic | ❌ | ❌ | ❌ | ✅ |
+| Furm Type 2 | ❌ | ❌ | ❌ | ✅ |
+
 ## Minimum requirements
 ### Android
 

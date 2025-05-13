@@ -17,10 +17,12 @@
 #include <memory>
 
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Networking.Proximity.h>
+#include <winrt/Windows.Devices.SmartCards.h>
+#include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Storage.Streams.h>
-
-#include <winscard.h>
+#include <winrt/Windows.Security.Cryptography.h>
 
 #include "thread_handler.hpp"
 #include "utils/utils.h"
@@ -30,8 +32,12 @@
 namespace layrz_nfc {
   using namespace winrt;
   using namespace winrt::Windows::Foundation;
+  using namespace winrt::Windows::Foundation::Collections;
+  using namespace winrt::Windows::Devices::SmartCards;
+  using namespace winrt::Windows::Devices::Enumeration;
   using namespace winrt::Windows::Networking::Proximity;
   using namespace Windows::Storage::Streams;
+  using namespace Windows::Security::Cryptography;
 
   using layrz_nfc::ErrorOr;
   using layrz_nfc::LayrzNfcPlatformChannel;
@@ -40,25 +46,21 @@ namespace layrz_nfc {
   
   class LayrzNfcPlugin : public flutter::Plugin, public LayrzNfcPlatformChannel {
     public:
+      /// @brief This is the NFC callback channel used for communication with the Flutter side.
+      /// @note This channel is used to send messages to the Flutter side.
+      static std::unique_ptr<LayrzNfcCallbackChannel> callbackChannel;
+
       /// @brief This is the NFC device used for communication.
       /// @note This device can be null if no NFC device is found.
-      const char* nfc_ = nullptr;
+      DeviceInformation nfc_{nullptr};
 
-      /// @brief This is the NFC reader name used for communication.
-      char readerName_[256] = {};
+      /// @brief This is the NFC reader used for communication.
+      /// @note This reader can be null if is not scanning.
+      SmartCardReader reader_{nullptr};
 
       /// @brief This is the UI thread handler used for posting messages to the UI thread.
       /// @note This handler is used to post messages to the UI thread from the background thread.
       LayrzNfcPluginUiThreadHandler uiThreadHandler_;
-
-      /// @brief This is the context used for establishing a connection to the NFC device.
-      SCARDCONTEXT context_ = 0;
-
-      /// @brief This is the flag used to stop the background thread.
-      std::atomic<bool> shouldStop_ = false;
-
-      /// @brief This is the background thread used for reading NFC tags.
-      std::thread readThread_;
 
       /// @brief Registers the plugin with the Flutter engine.
       /// @param registrar The plugin registrar for the plugin.
@@ -76,12 +78,7 @@ namespace layrz_nfc {
 
       /// @brief Gets the proximity device asynchronously.
       /// @note This function is called to get the proximity device asynchronously.
-      void GetScannersAsync();
-
-      /// @brief Binds the NFC scanners to the plugin.
-      /// @param result The result callback to be called with the result.
-      /// @note This function is called to bind the NFC scanners to the plugin.
-      void BindScanners(std::function<void(std::optional<FlutterError> reply)> result);
+      winrt::fire_and_forget GetScannersAsync();
 
       /// @brief Checks if the device has NFC capabilities.
       /// @param result The result callback to be called with the result.
@@ -112,16 +109,6 @@ namespace layrz_nfc {
     LayrzNfcPlugin& operator=(const LayrzNfcPlugin&) = delete;
 
     private:
-      /// @brief Creates a new NFC context.
-      /// @return true if the context was created successfully, false otherwise.
-      bool createNfcContext();
-
-      /// @brief Runs the NFC thread.
-      /// @param cxt The context to be used for the NFC device.
-      /// @param nfcReader The NFC reader name to be used for the NFC device.
-      /// @note This function is called to run the NFC thread.
-      void runNfcThread(SCARDCONTEXT cxt, const char* nfcReader);
-
       static void SuccessCallback() {}
       static void ErrorCallback(const FlutterError &error) {
         // Ignore ChannelConnection Error, This might occur because of HotReload
@@ -130,44 +117,28 @@ namespace layrz_nfc {
         }
       }
 
-      /// @brief Gets the status of the reader state.
-      /// @param state The reader state to be checked.
-      /// @return The status of the reader state.
-      std::string getStatusOfReaderState(SCARD_READERSTATEA state);
+      /// @brief This function is used to run the NFC reading procedure.
+      winrt::fire_and_forget StartReadingAsync();
 
-      /// @brief Reads the Mifare Mini card.
-      /// @param card The card handle to be used for reading the card.
-      /// @param protocol The protocol to be used for reading the card.
-      /// @note This function is called to read the Mifare Mini card.
-      void readMifareMiniCard(SCARDHANDLE card, DWORD protocol);
+      /// @brief This function is used to read the Mifare Classic card asynchronously.
+      /// @param conn The smart card connection to be used for reading.
+      /// @param dataFromCard The data read from the card as a vector of bytes pointer.
+      winrt::fire_and_forget ReadMifareClassicAsync(SmartCardConnection conn, std::vector<uint8_t> &dataFromCard);
 
-      /// @brief Reads the Mifare Classic card.
-      /// @param card The card handle to be used for reading the card.
-      /// @note This function is called to read the Mifare Classic card.
-      void readMifareClassicCard(SCARDHANDLE card);
+      /// @brief This function is used to read the NFC Forum Type 2 card asynchronously.
+      /// @param conn The smart card connection to be used for reading.
+      /// @param dataFromCard The data read from the card as a vector of bytes pointer.
+      winrt::fire_and_forget ReadForumType2Async(SmartCardConnection conn, std::vector<uint8_t> &dataFromCard);
 
-      /// @brief Reads the NFC Forum Type 2 card.
-      /// @param card The card handle to be used for reading the card.
-      /// @note This function is called to read the NFC Forum Type 2 card.
-      void readNfcForumType2Card(SCARDHANDLE card);
+      /// @brief This function is used to get the ATR (Answer to Reset) of the card.
+      /// @param conn The smart card connection to be used for reading.
+      /// @param atr The ATR of the card as a buffer.
+      std::string GetAtrHex(IBuffer atr);
 
-      /// @brief Authenticates the card.
-      /// @param card The card handle to be used for authentication.
-      /// @param block The block number to be authenticated.
-      /// @return the vector to be send to the card.
-      std::vector<BYTE> buildAuthAPDUCommand(BYTE block);
-
-      /// @brief Builds the read APDU command.
-      /// @param block The block number to be read.
-      /// @return The read APDU command to be sent to the card.
-      std::vector<BYTE> buildReadAPDUCommand(BYTE block);
-
-      /// @brief Sends an APDU command to the card.
-      /// @param hCard The card handle to be used for sending the command.
-      /// @param cmd The command to be sent to the card.
-      /// @param response The response to be received from the card.
-      /// @return The response from the card.
-      std::vector<BYTE> send(SCARDHANDLE hCard, BYTE* cmd, DWORD len, DWORD protocol);
+      /// @brief This function is used to detect the tag format of the card.
+      /// @param atr The ATR of the card as a buffer.
+      /// @return The tag format of the card as a TagFormat enum.
+      TagFormat DetectTagFormat(IBuffer atr);
   };
 
 }  // namespace layrz_nfc

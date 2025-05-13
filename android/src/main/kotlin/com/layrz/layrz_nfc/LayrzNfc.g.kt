@@ -83,7 +83,8 @@ class FlutterError (
 
 enum class TagFormat(val raw: Int) {
   NFC_FORUM_TYPE2(0),
-  MIFARE_CLASSIC(1);
+  MIFARE_CLASSIC(1),
+  UNKNOWN(2);
 
   companion object {
     fun ofRaw(raw: Int): TagFormat? {
@@ -156,7 +157,6 @@ private open class LayrzNfcPigeonCodec : StandardMessageCodec() {
 
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface LayrzNfcPlatformChannel {
-  fun bindScanners(callback: (Result<Unit>) -> Unit)
   fun checkCapabilities(callback: (Result<Boolean>) -> Unit)
   fun canRead(callback: (Result<Boolean>) -> Unit)
   fun canWrite(callback: (Result<Boolean>) -> Unit)
@@ -173,23 +173,6 @@ interface LayrzNfcPlatformChannel {
     @JvmOverloads
     fun setUp(binaryMessenger: BinaryMessenger, api: LayrzNfcPlatformChannel?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.bindScanners$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { _, reply ->
-            api.bindScanners{ result: Result<Unit> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(LayrzNfcPigeonUtils.wrapError(error))
-              } else {
-                reply.reply(LayrzNfcPigeonUtils.wrapResult(null))
-              }
-            }
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
       run {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.layrz_nfc.LayrzNfcPlatformChannel.checkCapabilities$separatedMessageChannelSuffix", codec)
         if (api != null) {
