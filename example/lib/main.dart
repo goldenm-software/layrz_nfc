@@ -92,7 +92,8 @@ class _HomePageState extends State<HomePage> {
                       await plugin.bindScanners();
 
                       bool result = await plugin.checkCapabilities();
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Capabilities: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -102,7 +103,8 @@ class _HomePageState extends State<HomePage> {
                       await Future.delayed(const Duration(milliseconds: 100));
 
                       result = await plugin.canRead();
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Can read: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -112,7 +114,8 @@ class _HomePageState extends State<HomePage> {
                       await Future.delayed(const Duration(milliseconds: 100));
 
                       result = await plugin.canWrite();
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Can write: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -122,7 +125,8 @@ class _HomePageState extends State<HomePage> {
                       await Future.delayed(const Duration(milliseconds: 100));
 
                       result = await plugin.canSimulate();
-                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context)
+                          .showSnackbar(ThemedSnackbar(
                         message: 'Can simulate: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -146,6 +150,7 @@ class _HomePageState extends State<HomePage> {
                       labelText: 'Start reading',
                       color: Colors.green,
                       onTap: () async {
+                        debugPrint(' Flutter call starting reading');
                         await plugin.startReading();
                         setState(() => _isReading = true);
                       },
