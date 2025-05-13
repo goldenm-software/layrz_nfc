@@ -17,15 +17,16 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import io.flutter.Log
+import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.atomic.AtomicBoolean
 
 
 /** LayrzNfcPlugin */
-class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware, PluginRegistry.NewIntentListener {
-
+class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware,  PluginRegistry.NewIntentListener {
   private var activity: Activity? = null
   private var mainLooper: Handler? = null
   private lateinit var context: Context
+  private var callbackChannel: LayrzNfcCallbackChannel? = null
 
   companion object {
     private const val TAG = "LayrzNfcPlugin/Android"
@@ -39,6 +40,8 @@ class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware, Plu
     LayrzNfcPlatformChannel.setUp(binding.binaryMessenger, this)
     context = binding.applicationContext
     mainLooper = Handler(Looper.getMainLooper())
+    callbackChannel = LayrzNfcCallbackChannel(binding.binaryMessenger)
+
   }
 
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -50,45 +53,39 @@ class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware, Plu
       NfcAdapter.ACTION_TAG_DISCOVERED == intent.action
     ) {
       Log.d(TAG, "Receive Nfc Intent: ${intent.action}")
-
       // Get the NFC Tag object from the Intent
       val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
       if (tag != null) {
         // Log basic information about the tag
-        Log.d(TAG, "NFC Tag detected: $tag")
-
+          Log.d(TAG, "NFC Tag detected: $tag")
         // Log the list of supported technologies
-        val techList = tag.techList
-        Log.d(TAG, "Supported technologies: ${techList.joinToString(", ")}")
-
-        // Example: Log the ID of the tag (if available)
-        val tagId = tag.id
-        if (tagId != null) {
-          val tagIdHex = tagId.joinToString("") { String.format("%02X", it) }
-          Log.d(TAG, "Tag ID (hex): $tagIdHex")
-        }
-
-        // If the tag supports NDEF, log the NDEF message
-        val ndef = Ndef.get(tag)
-        if (ndef != null) {
-          ndef.connect()
-          val ndefMessage = ndef.ndefMessage
-          if (ndefMessage != null) {
-            for (record in ndefMessage.records) {
-              val payload = String(record.payload)
-              Log.d(TAG, "NDEF Record Payload: $payload")
-            }
-          } else {
-            Log.d(TAG, "No NDEF message found on the tag")
+          val techList = tag.techList
+          val tagFormat = when {
+            techList.contains("android.nfc.tech.MifareClassic") -> TagFormat.MIFARE_CLASSIC
+            techList.contains("android.nfc.tech.NfcA") || techList.contains("android.nfc.tech.Ndef") -> TagFormat.NFC_FORUM_TYPE2
+            else -> TagFormat.UNKNOWN
           }
-          ndef.close()
-        } else {
-          Log.d(TAG, "Tag does not support NDEF")
-        }
-      } else {
-        Log.e(TAG, "No NFC Tag found in the Intent")
-      }
+        // If the tag supports NDEF, log the NDEF message
+          val ndef = Ndef.get(tag)
+          if (ndef != null) {
+            ndef.connect()
+            val ndefMessage = ndef.ndefMessage
+            val allPayloads: ByteArray = ndefMessage.records
+              .map { it.payload }
+              .reduce { acc, bytes -> acc + bytes }
 
+            val tagPayload = TagPayload(allPayloads, tagFormat)
+            if (allPayloads.isNotEmpty() && callbackChannel != null) {
+              mainLooper?.post{
+                callbackChannel?.onRead(
+                    tagPayload
+                ) {}
+              }
+              Log.w(TAG, "Payload sended")
+              ndef.close()
+            }
+          }
+        }
       return true
     }
     return false
@@ -135,10 +132,6 @@ class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware, Plu
   override fun onDetachedFromActivity() {
     Log.w(TAG, "Call onDetachedFromActivity")
     activity = null
-  }
-
-  override fun bindScanners(callback: (Result<Unit>) -> Unit) {
-    callback(Result.success(bindScanners()))
   }
 
   override fun checkCapabilities(callback: (Result<Boolean>) -> Unit) {
@@ -199,12 +192,6 @@ class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware, Plu
     }
     return true
   }
-
-  fun bindScanners() {
-    Log.w(TAG, "BindScanners is not implemented in Android")
-  }
-
-
 }
 
 

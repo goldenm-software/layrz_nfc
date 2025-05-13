@@ -1,6 +1,5 @@
 // ignore_for_file: use_build_context_synchronously
-
-import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:layrz_nfc/layrz_nfc.dart';
@@ -53,12 +52,7 @@ class _HomePageState extends State<HomePage> {
 
   final plugin = LayrzNfc();
   bool _isReading = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
+  String? payload;
   @override
   Widget build(BuildContext context) {
     return ThemedLayout(
@@ -156,6 +150,10 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ],
               ),
+            ),
+            Text(
+              "Payload: $payload",
+              style: Theme.of(context).textTheme.titleLarge,
             ),
           ],
         ),
