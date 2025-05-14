@@ -11,15 +11,15 @@ A simple way to interact with NFC cards in Flutter.
 
 | Method or stream | Android | iOS | macOS | Windows | Description | 
 | --- | --- | --- | --- | --- | --- |
-| `checkCapabilities` | ✅ | ❌ | ❌ | ❌ | Check if the device has NFC capabilities. |
-| `canRead` | ✅ | ❌ | ❌ | ❌ | Check if the device can read NFC cards. |
-| `canWrite` | ✅ | ❌ | ❌ | ❌ | Check if the device can write NFC cards. |
-| `canSimulate` | ✅ | ❌ | ❌ | ❌ | Check if the device can simulate NFC cards. |
-| `startReading` | ❌ | ❌ | ❌ | ❌ | Start reading NFC cards. |
-| `stopReading` | ❌ | ❌ | ❌ | ❌ | Stop reading NFC cards. |
+| `checkCapabilities` | ✅ | ❌ | ❌ | ✅ | Check if the device has NFC capabilities. |
+| `canRead` | ✅ | ❌ | ❌ | ✅ | Check if the device can read NFC cards. |
+| `canWrite` | ✅ | ❌ | ❌ | ✅ | Check if the device can write NFC cards. |
+| `canSimulate` | ✅ | ❌ | ❌ | ✅ | Check if the device can simulate NFC cards. |
+| `startReading` | ✅ | ❌ | ❌ | ✅ | Start reading NFC cards. |
+| `stopReading` | ✅ | ❌ | ❌ | ✅ | Stop reading NFC cards. |
 | `write` | ❌ | ❌ | ❌ | ❌ | Write NFC cards. |
 | `simulate` | ❌ | ❌ | ❌ | ❌ | Simulate NFC cards. |  
-| `onRead` | ❌ | ❌ | ❌ | ❌ | Stream that emits when a NFC card is read, requires `startReading` and `stopReading` to work. | 
+| `onRead` | ❌ | ❌ | ❌ | ❌ | Stream that emits when a NFC card is read, requires `startReading` and `stopReading` to work. (See below for more information) | 
 | `onEvent` | ❌ | ❌ | ❌ | ❌ | Stream that emits when an event, like `ReadStarted`, `ReadStopped`, etc etc etc |
 
 ### Languages used
@@ -30,11 +30,15 @@ A simple way to interact with NFC cards in Flutter.
 | macOS | Swift |
 | Windows | C++ |
 
+### `onRead` stream
+
+The `onRead` stream emits the `NDEFRecord` object from [`ndef`](https://pub.dev/packages/ndef) package, you may need to install the `ndef` package to precisely read the NDEF records.
+
 ## Data formats supported
 | Data format | Android | iOS | macOS | Windows |
 | --- | --- | --- | --- | --- |
-| MIFARE Classic | ❌ | ❌ | ❌ | ✅ |
-| Furm Type 2 | ❌ | ❌ | ❌ | ✅ |
+| MIFARE Classic | ✅ | ❌ | ❌ | ✅ |
+| Furm Type 2 | ✅ | ❌ | ❌ | ✅ |
 
 ## Minimum requirements
 ### Android

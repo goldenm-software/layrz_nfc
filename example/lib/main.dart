@@ -6,6 +6,7 @@ import 'package:layrz_nfc/layrz_nfc.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_models/layrz_models.dart';
 import 'package:layrz_theme/layrz_theme.dart';
+import 'package:ndef/ndef.dart' as ndef;
 
 const kFont = AppFont(source: FontSource.google, name: 'Ubuntu');
 
@@ -53,6 +54,21 @@ class _HomePageState extends State<HomePage> {
   final plugin = LayrzNfc();
   bool _isReading = false;
   String? payload;
+
+  @override
+  void initState() {
+    super.initState();
+    plugin.onRead.listen((record) {
+      if (record is ndef.TextRecord) {
+        debugPrint('TextRecord: ${record.text}');
+      } else if (record is ndef.UriRecord) {
+        debugPrint('UriRecord: ${record.uri}');
+      } else {
+        debugPrint('Unknown record type: ${record.runtimeType}');
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return ThemedLayout(
@@ -84,8 +100,7 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.blue,
                     onTap: () async {
                       bool result = await plugin.checkCapabilities();
-                      ThemedSnackbarMessenger.of(context)
-                          .showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
                         message: 'Capabilities: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -95,8 +110,7 @@ class _HomePageState extends State<HomePage> {
                       await Future.delayed(const Duration(milliseconds: 100));
 
                       result = await plugin.canRead();
-                      ThemedSnackbarMessenger.of(context)
-                          .showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
                         message: 'Can read: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -106,8 +120,7 @@ class _HomePageState extends State<HomePage> {
                       await Future.delayed(const Duration(milliseconds: 100));
 
                       result = await plugin.canWrite();
-                      ThemedSnackbarMessenger.of(context)
-                          .showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
                         message: 'Can write: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,
@@ -117,8 +130,7 @@ class _HomePageState extends State<HomePage> {
                       await Future.delayed(const Duration(milliseconds: 100));
 
                       result = await plugin.canSimulate();
-                      ThemedSnackbarMessenger.of(context)
-                          .showSnackbar(ThemedSnackbar(
+                      ThemedSnackbarMessenger.of(context).showSnackbar(ThemedSnackbar(
                         message: 'Can simulate: $result',
                         color: Colors.blue,
                         icon: LayrzIcons.solarOutlineBluetoothSquare,

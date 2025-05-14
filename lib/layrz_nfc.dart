@@ -6,7 +6,7 @@ import 'package:ndef/ndef.dart';
 /// The methods in this class should be implemented to provide specific functionality
 /// related to reading, writing, and simulating NFC tags.
 class LayrzNfc {
-  static LayrzNfcPlatformInterface _channel = _getPlatformChannel();
+  static final LayrzNfcPlatformInterface _channel = _getPlatformChannel();
   static LayrzNfcPlatformInterface _getPlatformChannel() {
     return LayrzNfcPigeonChannel.instance;
   }

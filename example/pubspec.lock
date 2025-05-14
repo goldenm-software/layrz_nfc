@@ -463,7 +463,7 @@ packages:
     source: hosted
     version: "2.0.0"
   ndef:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: ndef
       sha256: "5083507cff4bb823b2a198a27ea2c70c4d6bc27a97b66097d966a250e1615d54"

@@ -12,6 +12,7 @@ dependencies:
   layrz_icons: any
   layrz_theme: any
   layrz_models: any
+  ndef: any
 
   layrz_nfc:
     path: ../

@@ -8,7 +8,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.nfc.tech.MifareClassic
 import android.nfc.tech.Ndef
+import android.nfc.tech.NfcA
+import android.os.Build
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -22,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 
 /** LayrzNfcPlugin */
-class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware,  PluginRegistry.NewIntentListener {
+class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware {
   private var activity: Activity? = null
   private var mainLooper: Handler? = null
   private lateinit var context: Context
@@ -32,92 +35,23 @@ class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware,  Pl
     private const val TAG = "LayrzNfcPlugin/Android"
   }
 
-  private var nfcAdapter: NfcAdapter? = null
-  private var pendingIntent: PendingIntent? = null
-  private var intentFiltersArray: Array<IntentFilter>? = null
+  private var adapter: NfcAdapter? = null
 
   override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     LayrzNfcPlatformChannel.setUp(binding.binaryMessenger, this)
     context = binding.applicationContext
     mainLooper = Handler(Looper.getMainLooper())
     callbackChannel = LayrzNfcCallbackChannel(binding.binaryMessenger)
-
+    adapter = NfcAdapter.getDefaultAdapter(context)
   }
 
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     mainLooper = null
+    callbackChannel = null
   }
-  override fun onNewIntent(intent: Intent): Boolean {
-    if (NfcAdapter.ACTION_NDEF_DISCOVERED == intent.action ||
-      NfcAdapter.ACTION_TECH_DISCOVERED == intent.action ||
-      NfcAdapter.ACTION_TAG_DISCOVERED == intent.action
-    ) {
-      Log.d(TAG, "Receive Nfc Intent: ${intent.action}")
-      // Get the NFC Tag object from the Intent
-      val tag: Tag? = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
-      if (tag != null) {
-        // Log basic information about the tag
-          Log.d(TAG, "NFC Tag detected: $tag")
-        // Log the list of supported technologies
-          val techList = tag.techList
-          val tagFormat = when {
-            techList.contains("android.nfc.tech.MifareClassic") -> TagFormat.MIFARE_CLASSIC
-            techList.contains("android.nfc.tech.NfcA") || techList.contains("android.nfc.tech.Ndef") -> TagFormat.NFC_FORUM_TYPE2
-            else -> TagFormat.UNKNOWN
-          }
-        // If the tag supports NDEF, log the NDEF message
-          val ndef = Ndef.get(tag)
-          if (ndef != null) {
-            ndef.connect()
-            val ndefMessage = ndef.ndefMessage
-            val allPayloads: ByteArray = ndefMessage.records
-              .map { it.payload }
-              .reduce { acc, bytes -> acc + bytes }
 
-            val tagPayload = TagPayload(allPayloads, tagFormat)
-            if (allPayloads.isNotEmpty() && callbackChannel != null) {
-              mainLooper?.post{
-                callbackChannel?.onRead(
-                    tagPayload
-                ) {}
-              }
-              Log.w(TAG, "Payload sended")
-              ndef.close()
-            }
-          }
-        }
-      return true
-    }
-    return false
-  }
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
     activity = binding.activity
-    binding.addOnNewIntentListener(this)
-    nfcAdapter = NfcAdapter.getDefaultAdapter(context)
-    if (nfcAdapter != null) {
-      pendingIntent = PendingIntent.getActivity(
-        activity,
-        0,
-        Intent(activity, activity!!::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-      )
-      // Define intent filters to handle different NFC actions
-      val ndef = IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED).apply {
-        try {
-          addDataType("*/*") // Handle any MIME type
-        } catch (e: IntentFilter.MalformedMimeTypeException) {
-          e.printStackTrace()
-        }
-      }
-
-      val tag = IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED)
-      val tech = IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED)
-
-// Combine all filters into a single array
-      intentFiltersArray = arrayOf(ndef, tag, tech)
-    } else {
-      Log.w(TAG, "NFC is not supported in this device")
-    }
   }
 
   override fun onDetachedFromActivityForConfigChanges() {
@@ -135,7 +69,7 @@ class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware,  Pl
   }
 
   override fun checkCapabilities(callback: (Result<Boolean>) -> Unit) {
-    if (nfcAdapter != null) {
+    if (adapter != null) {
       callback(Result.success(true))
       return
     }
@@ -156,41 +90,190 @@ class LayrzNfcPlugin: LayrzNfcPlatformChannel, FlutterPlugin, ActivityAware,  Pl
   }
 
   override fun startReading(callback: (Result<Boolean>) -> Unit) {
-    Log.w(TAG, "Start Reading ...")
-    if (nfcAdapter != null) {
-      nfcAdapter?.enableForegroundDispatch(activity, pendingIntent, intentFiltersArray, null);
-      callback(Result.success(true))
+    if (adapter == null) {
+      Log.w(TAG, "NFC unsupported")
+      callback(Result.success(false))
       return
     }
-    callback(Result.success(false))
+
+    adapter!!.enableReaderMode(
+       activity,
+       nfcCallbacks,
+       NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+       null
+    )
+
+    Log.w(TAG, "Start Reading ...")
+    callback(Result.success(true))
     return
   }
 
   override fun stopReading(callback: (Result<Boolean>) -> Unit) {
     Log.w(TAG, "Stop Reading ...")
-    if (nfcAdapter != null && activity != null) {
-      try {
-        nfcAdapter?.disableForegroundDispatch(activity)
-        Log.w(TAG, "NFC deshabilitado correctamente")
-        callback(Result.success(true))
-      } catch (e: Exception) {
-        Log.e(TAG, "Error al deshabilitar NFC: ${e.message}")
-        callback(Result.success(false))
-      }
+
+    if (adapter == null) {
+      Log.w(TAG, "NFC unsupported")
+      callback(Result.success(true))
+      return
     }
-    callback(Result.success(false))
+
+    adapter!!.disableReaderMode(activity)
+    callback(Result.success(true))
   }
 
   private fun canNfc(): Boolean {
-    if (nfcAdapter == null) {
-      nfcAdapter = NfcAdapter.getDefaultAdapter(context)
-    }
-    if (nfcAdapter?.isEnabled != true) {
+    if (adapter?.isEnabled != true) {
       Log.w(TAG, "NFC unsuported")
 
       return false
     }
     return true
+  }
+
+  private val nfcCallbacks = NfcAdapter.ReaderCallback { tag ->
+    Log.w(TAG, "onTagDiscovered")
+
+    val techList = tag.techList
+    val tagFormat = when {
+      techList.contains("android.nfc.tech.MifareClassic") -> TagFormat.MIFARE_CLASSIC
+      techList.contains("android.nfc.tech.NfcA") -> TagFormat.NFC_FORUM_TYPE2
+      else -> TagFormat.UNKNOWN
+    }
+
+    Log.d(TAG, "TechList: ${techList.joinToString(", ")}")
+
+    when (tagFormat) {
+      TagFormat.MIFARE_CLASSIC -> {
+        try {
+          val mifare = MifareClassic.get(tag)
+          mifare.connect()
+
+          val keys = listOf(
+            MifareClassic.KEY_DEFAULT,
+            byteArrayOf(0xA0.toByte(), 0xA1.toByte(), 0xA2.toByte(), 0xA3.toByte(), 0xA4.toByte(), 0xA5.toByte()),
+            byteArrayOf(0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte(), 0xD3.toByte(), 0xF7.toByte())
+            // Add more if needed
+          )
+
+          var payload: ByteArray = byteArrayOf()
+          val authMap = mutableMapOf<Int, Boolean>()
+
+          for (block in 0 until mifare.blockCount) {
+            if ((block + 1) % 4 == 0) continue // Skip trailer blocks
+
+            val sector = mifare.blockToSector(block)
+            val alreadyAuth = authMap[sector] ?: false
+
+            if (!alreadyAuth) {
+              var auth = false
+              for (key in keys) {
+                if (mifare.authenticateSectorWithKeyA(sector, key)) {
+                  //Log.d(TAG, "Authenticated sector $sector with Key A")
+                  auth = true
+                  break
+                } else if (mifare.authenticateSectorWithKeyB(sector, key)) {
+                  //Log.d(TAG, "Authenticated sector $sector with Key B")
+                  auth = true
+                  break
+                }
+              }
+
+              authMap[sector] = auth
+            }
+
+            if (!authMap[sector]!!) {
+              Log.w(TAG, "Failed to authenticate sector $sector")
+              continue
+            }
+
+            try {
+              val data = mifare.readBlock(block)
+              //Log.d(TAG, "Read block $block: $data")
+              payload += data
+            } catch (e: Exception) {
+              Log.w(TAG, "Error reading block $block", e)
+            }
+          }
+
+          mifare.close()
+
+          if (payload.isNotEmpty()) {
+            Log.d(TAG, "Sending payload to callback: $payload")
+
+            mainLooper?.post {
+              callbackChannel?.onRead(
+                payloadArg = TagPayload(
+                  payload = payload,
+                  format = TagFormat.MIFARE_CLASSIC,
+                )
+              ) {}
+            }
+          }
+        } catch (e: Exception) {
+          Log.w(TAG, "Error reading MifareClassic tag $e")
+        }
+      }
+      TagFormat.NFC_FORUM_TYPE2 -> {
+        val nfcA = NfcA.get(tag)
+        nfcA.connect()
+
+        val startPage = 4
+        val maxPage = 36
+
+        var payload = byteArrayOf()
+        for (page in startPage..maxPage step 4) {
+          val cmd = byteArrayOf(0x30.toByte(), page.toByte())
+          try {
+            val data = nfcA.transceive(cmd)
+            //Log.d(TAG, "Read page $page: $data")
+            payload += data
+          } catch (e: Exception) {
+            Log.w(TAG, "Error reading page $page", e)
+          }
+        }
+
+        nfcA.close()
+        if (payload.isNotEmpty()) {
+          Log.d(TAG, "Sending payload to callback: $payload")
+
+          mainLooper?.post {
+            callbackChannel?.onRead(
+              payloadArg = TagPayload(
+                payload = payload,
+                format = TagFormat.NFC_FORUM_TYPE2,
+              )
+            ) {}
+          }
+        }
+      }
+      TagFormat.UNKNOWN -> {
+        Log.w(TAG, "Tag format: Unknown")
+      }
+    }
+
+    return@ReaderCallback
+
+
+//    val ndef = Ndef.get(tag)
+//    if (ndef == null) {
+//      Log.w(TAG, "Ndef is null")
+//      return@ReaderCallback
+//    }
+//
+//    val ndefMessage = ndef.ndefMessage.toByteArray()
+//    if (ndefMessage == null) {
+//      Log.w(TAG, "NdefMessage is null")
+//      return@ReaderCallback
+//    }
+//
+//    mainLooper?.post {
+//      callbackChannel?.onRead(
+//        payloadArg = TagPayload(
+//          payload = ndefMessage,
+//          format = tagFormat,
+//        )
+//      ) {}
+//    }
   }
 }
 
